@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var argv = require('minimist')(process.argv.slice(2));
+
 var Packages = require('./packages');
 
 // If link is passed we should symlink the local-packages.json
@@ -16,7 +17,7 @@ var useHttps = !!argv.https;
 var packageName = argv._[1] || !link && argv._[0];
 
 var packageDefinitionFile = process.cwd() + '/' +
-  (link ? 'local-packages.json' : 'git-packages.json');
+    (link ? 'local-packages.json' : 'git-packages.json');
 
 Packages.fromFile(packageDefinitionFile, function (error, packages) {
   // Fail gracefully.
@@ -44,6 +45,6 @@ Packages.fromFile(packageDefinitionFile, function (error, packages) {
       packages = Packages.toHttps(packages);
     }
 
-    Packages.load(packages, done);
+    Packages.load(packages, argv.addToGlobals, done);
   }
 });

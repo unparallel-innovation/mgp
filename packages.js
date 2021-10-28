@@ -1,9 +1,9 @@
 var Packages = module.exports = {};
 
 var _ = require('lodash'),
-  fs = require('fs-extra'),
-  path = require('path'),
-  shell = require('shelljs');
+    fs = require('fs-extra'),
+    path = require('path'),
+    shell = require('shelljs');
 
 // We rely on system git command and its configuration
 // In this way it is possible to pick up .netrc
@@ -12,7 +12,9 @@ if (!shell.which('git')) {
   shell.exit(1);
 }
 
-var PACKAGE_DIR = process.cwd() + '/packages';
+var ROOT_DIR = process.cwd();
+
+var PACKAGE_DIR = ROOT_DIR + '/packages';
 
 function resolvePath(string) {
   if (string.substr(0, 1) === '~') {
@@ -86,6 +88,50 @@ var checkPathExist = function (path, errorMessage) {
 };
 
 /**
+ * Get the Meteor name of the package being added
+ * @param dest -  path to the package
+ * @return string
+ */
+var getPackageName = function (dest) {
+  var packageJsPath = dest + '/package.js',
+      packageName = false,
+      lines = [];
+  checkPathExist(packageJsPath, 'package.js file not found.');
+
+  packageJsContents = fs.readFileSync(packageJsPath, 'utf8');
+
+  lines = packageJsContents.split(/\n/g);
+  for (line in lines) {
+    if (/name/.test(lines[line]) && (lines[line].match(/:/g).length >= 2)) {
+      packageName = lines[line].split(/:(.+)?/)[1].trim().replace(/\"/g, '').replace(/\'/g, '').replace(/,/g, '');
+      break;
+    }
+  }
+
+  return packageName;
+};
+
+
+/**
+ * Loop through the list of packages and add them to the Meteor app
+ * @param packagesToAddToMeteor - list of packages
+ */
+var addPackagesToMeteor = function(packagesToAddToMeteor) {
+  shell.cd(ROOT_DIR);
+  shell.echo("Adding the cloned packages to the Meteor app...");
+  for (index in packagesToAddToMeteor) {
+    package = packagesToAddToMeteor[index];
+
+    shell.echo("Adding package '" + package + "'...");
+    if (shell.exec('meteor add ' + package, {
+      silent: false
+    }).code !== 0) {
+      shell.echo("Error: Package '" + package + "' could not be added to the Meteor app.");
+    }
+  }
+};
+
+/**
  * Create a git ignore in the package directory for the packages.
  * @param packages
  * @param {Function} callback
@@ -140,9 +186,11 @@ Packages.link = function (packages, callback) {
 /**
  * Clones repositories and copy the packages.
  * @param packages The packages to load.
+ * @param addToGlobals whether or not to automatically add the packages with meteor add
  * @param {Function} callback
  */
-Packages.load = function (packages, callback) {
+Packages.load = function (packages, addToGlobals, callback) {
+
   shell.mkdir('-p', PACKAGE_DIR);
 
   // Create a temp directory to store the tarballs
@@ -150,7 +198,7 @@ Packages.load = function (packages, callback) {
   shell.rm('-fr', tempDir);
   shell.mkdir('-p', tempDir);
   shell.cd(tempDir);
-
+  var packagesToAddToMeteor = [];
   var resolvedPackages = getPackagesDict(packages);
 
   var repoDirIndex = 0;
@@ -162,8 +210,8 @@ Packages.load = function (packages, callback) {
     shell.cd(tempDir);
 
     if (shell.exec('git clone ' + gitRepo + ' ' + repoDirIndex, {
-        silent: true
-      }).code !== 0) {
+      silent: true
+    }).code !== 0) {
       shell.echo('Error: Git clone failed: ' + gitRepo);
       shell.exit(1);
     }
@@ -175,16 +223,16 @@ Packages.load = function (packages, callback) {
 
     _.forOwn(repoPackages, function (branchPackages, branch) {
       if (shell.exec('git checkout -f ' + branch, {
-          silent: false
-        }).code !== 0) {
+        silent: false
+      }).code !== 0) {
         shell.echo('Error: Git checkout branch failed for ' + gitRepo + '@' + version);
         shell.exit(1);
       }
       _.forOwn(branchPackages, function (storedPackages, version) {
         _.forOwn(storedPackages, function (src, packageName) {
           if (shell.exec('git reset --hard ' + version, {
-              silent: false
-            }).code !== 0) {
+            silent: false
+          }).code !== 0) {
             shell.echo('Error: Git checkout failed for ' + packageName + '@' + version);
             shell.exit(1);
           }
@@ -203,6 +251,11 @@ Packages.load = function (packages, callback) {
           shell.cp('-rf', src + '.', dest);
           checkPathExist(dest, 'Cannot copy package: ' + dest);
           shell.echo('Done...\n');
+          if (addToGlobals) {
+            if (packageName = getPackageName(dest)) {
+              packagesToAddToMeteor.push(packageName);
+            }
+          }
         });
       });
     });
@@ -212,6 +265,11 @@ Packages.load = function (packages, callback) {
   // Remove the temp directory after the packages are copied.
   shell.cd(process.cwd());
   shell.rm('-fr', tempDir);
+
+  // add the packages to meteor
+  if (addToGlobals) {
+    addPackagesToMeteor(packagesToAddToMeteor);
+  }
   callback();
 };
 
