@@ -61,11 +61,9 @@ npm install @unparallel/mgp --save-dev
 ````json
 
 {
-   ...
    "scripts": {
      "postinstall": "mgp --addToGlobals"
-   },
-  ...
+   }
 }
 ````
 * Now after running npm install, the meteor private packages defined on `git-packages.json` will be installed and added to meteor
