@@ -4,7 +4,7 @@ This tools helps you share private meteor packages.
 
 ## Getting Started
 
-- `npm install -g mgp`
+- `npm install -g @unparallel/mgp`
 
 - Add `git-packages.json` to the root of your project.
 
@@ -44,3 +44,28 @@ You can also run `mgp --https` to convert github ssh urls to https. This is usef
 ````
 
 - Run `mgp link` in your meteor directory to symlink your local packages or `mgp link my:private-package` to symlink an individual package.
+
+
+- If you run `mgp --addToGlobals` the `addToGlobals` will run `meteor add` for each project fetched
+
+## Add MGP to your project as a dev dependency
+
+This sections explains how to add MGP as a dev dependency and how to run automatically after installing the npm dependencies, this is useful for CI/CD use cases 
+
+* Install MGP as a dev dependency
+ ````shell
+npm install @unparallel/mgp --save-dev
+ ````
+* Update package.json to run mgp after npm install
+
+````json
+
+{
+   ...
+   "scripts": {
+     "postinstall": "mgp --addToGlobals"
+   },
+  ...
+}
+````
+* Now after running npm install, the meteor private packages defined on `git-packages.json` will be installed and added to meteor
