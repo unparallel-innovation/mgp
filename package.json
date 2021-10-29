@@ -8,10 +8,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/unparallel-innovation/mgp/blob/master/package.json"
+    "url": "https://github.com/unparallel-innovation/mgp"
   },
   "bugs": {
-    "url": "https://github.com/unparallel-innovation/mgp/blob/master/package.json"
+    "url": "https://github.com/unparallel-innovation/mgp/issues"
   },
   "keywords": [
     "meteor",
